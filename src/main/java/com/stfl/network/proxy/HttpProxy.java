@@ -123,41 +123,34 @@ public class HttpProxy implements IProxy {
 
         return false;
     }
-
-    private Map<String, String> getHttpMethod(byte[] data) {
-        String httpRequest = Util.bytesToString(data, 0, data.length);
-        String[] httpHeaders = httpRequest.split("\\r?\\n");
-        boolean isHostFound = true;
-        //Pattern pattern = Pattern.compile("^([a-zA-Z]*) [hHtTpP]{0,4}[:\\/]{0,3}(\\S[^/ ]*)");
-        Pattern pattern = Pattern.compile("^([a-zA-Z]*) [htps]{0,4}[:/]{0,3}(\\S[^/]*)(\\S*) (\\S*)");
-        Map<String, String> header = new HashMap<>();
-        if (httpHeaders.length > 0) {
-            logger.fine("HTTP Header: " + httpHeaders[0]);
-            Matcher matcher = pattern.matcher(httpHeaders[0]);
-            if (matcher.find()) {
-                header.put("method", matcher.group(1));
-                if (matcher.group(2).startsWith("/")) {
-                    header.put("url", "/");
-                    isHostFound = false;
-                }
-                else {
-                    header.put("host", matcher.group(2));
-                    header.put("url", matcher.group(3));
-                }
-                header.put("version", matcher.group(4));
-            }
-        }
-
-        if (!isHostFound) {
-            for (String line : httpHeaders) {
-                if (line.toLowerCase().contains("host")) {
-                    String info = line.split(":")[1].trim();
-                    header.put("host", info);
-                    break;
-                }
-            }
-        }
-        return header;
+//正则表达式bug修复
+       private Map<String, String> getHttpMethod(byte[] data) {
+    	String httpRequest = Util.bytesToString(data, 0, data.length);
+//    	httpRequest=httpRequest.replaceAll("https:", "HTTPS:").replaceAll("ftp:", "FTP:").replaceAll("http:", "HTTP:");
+//    	System.out.println("httpRequest:"+httpRequest);
+    	String[] httpHeaders = httpRequest.split("\\r?\\n");
+    	boolean isHostFound = true;
+    	//Pattern pattern = Pattern.compile("^([a-zA-Z]*) [hHtTpP]{0,4}[:\\/]{0,3}(\\S[^/ ]*)");
+    	Pattern pattern = Pattern.compile("^([a-zA-Z]*) [htps]{0,4}[:/]{0,3}(\\S[^/]*)(\\S*) (\\S*)");
+    	Map<String, String> header = new HashMap<>();
+    	String[] split = httpHeaders[0].split(" ");
+    	header.put("method",split[0]);
+    	String string = split[1];
+    	String host=split[1];
+    	if(host.contains("://")){
+    		host=host.split("://")[1];
+    	}
+    	host=host.split("/")[0];
+    	header.put("host",host);
+    	String url=null;
+    	if(split[1].split(host).length>0){
+    		url=split[1].split(host)[1];
+    	}else{
+    		url="/";
+    	}
+    	header.put("url",url);
+    	header.put("version",split[2]);
+    	return header;
     }
 
     private byte[] reconstructHttpHeader(Map<String, String> method, byte[] data) {
